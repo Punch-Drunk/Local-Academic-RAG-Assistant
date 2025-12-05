@@ -10,11 +10,10 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - To assist me in reviewing topics and material
 
 ## Tech Stack
-- **Local LLM**: Ollama + Mistral 7B
-- **Embeddings**: Sentence Transformers (all-MiniLM-L6-v2)
+- **Local LLM**: Ollama + Mistral 7B (TBD)
+- **Embeddings**: Sentence Transformers 
 - **Vector Store**: ChromaDB
 - **Document Processing**: PyMuPDF, custom chunking strategies
-- **UI**: Streamlit (planned)
 - **Environment**: Python 3.10, Linux, RTX 4060
 
 ## Current Status
