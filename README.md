@@ -7,7 +7,7 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - To gain hands-on experience with RAG systems
 - To create a practical tool for reviewing ML concepts
 - To learn about document processing, embeddings, and local LLMs
-- Portfolio project post-bachelor's degree
+- To assist me in reviewing topics and material
 
 ## Tech Stack
 - **Local LLM**: Ollama + Mistral 7B
