@@ -31,7 +31,6 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - [ ] Phase 3: Embedding and vector store setup
 - [ ] Phase 4: Integration with local LLM (Ollama)
 - [ ] Phase 5: Web interface with Streamlit
-- [ ] Phase 6: Special handling for equations and code
 
 ## Learning Goals
 - [ ] Implement a complete RAG pipeline from scratch
