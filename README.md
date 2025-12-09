@@ -35,7 +35,6 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 ## Learning Goals
 - [ ] Implement a complete RAG pipeline from scratch
 - [ ] Work with different document formats
-- [ ] Optimize chunking for academic content
 - [ ] Deploy a local LLM application
 - [ ] Create a usable tool for my own learning
 
