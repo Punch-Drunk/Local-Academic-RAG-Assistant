@@ -13,11 +13,11 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - **Local LLM**: Ollama + Mistral 7B (TBD)
 - **Embeddings**: Sentence Transformers 
 - **Vector Store**: ChromaDB
-- **Document Processing**: PyMuPDF, custom chunking strategies
+- **Document Processing**: PyMuPDF4LLM, PyMuPDF Layout
 - **Environment**: Python 3.10, Linux, RTX 4060
 
 ## Current Status
-🚧 In Development - Phase 0: Project Setup
+🚧 In Development - Phase 2: Intelligent LaTeX extraction
 
 ## Getting Started
 1. Clone the repository
@@ -26,8 +26,8 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 4. Install dependencies: `pip install -r requirements.txt`
 
 ## Roadmap
-- [ ] Phase 1: Basic document loading (PDFs)
-- [ ] Phase 2: Chunking strategy for academic content
+- [X] Phase 1: Basic document loading (PDFs)
+- [ ] Phase 2: Intelligent LaTeX extraction
 - [ ] Phase 3: Embedding and vector store setup
 - [ ] Phase 4: Integration with local LLM (Ollama)
 - [ ] Phase 5: Web interface with Streamlit
