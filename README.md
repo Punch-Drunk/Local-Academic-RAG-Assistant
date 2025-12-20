@@ -13,7 +13,7 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - **Local LLM**: Ollama + Mistral 7B (TBD)
 - **Embeddings**: Sentence Transformers 
 - **Vector Store**: ChromaDB
-- **Document Processing**: PyMuPDF4LLM, PyMuPDF Layout
+- **Document Processing**: PyMuPDF4LLM, PyMuPDF Layout, LaTeXOCR
 - **Environment**: Python 3.10, Linux, RTX 4060
 
 ## Current Status
@@ -27,7 +27,7 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 
 ## Roadmap
 - [X] Phase 1: Basic document loading (PDFs)
-- [ ] Phase 2: Intelligent LaTeX extraction
+- [X] Phase 2: Intelligent LaTeX extraction
 - [ ] Phase 3: Embedding and vector store setup
 - [ ] Phase 4: Integration with local LLM (Ollama)
 - [ ] Phase 5: Web interface with Streamlit
