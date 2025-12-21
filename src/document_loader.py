@@ -5,12 +5,21 @@ from typing import List, Dict, Optional
 import logging
 import pymupdf.layout
 import pymupdf4llm
+import clip
+import torch
+from pathlib import Path
+from pix2tex.cli import LatexOCR
+from PIL import Image
 
 
 class DocumentLoader:
     def __init__(self):
         self.supported_extensions = ['.pdf']  # We'll add more later
         self.logger = logging.getLogger(__name__)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.clipModel, self.preprocess = clip.load("ViT-B/32", device=self.device)
+        self.labels = ["a mathematical equation", "a diagram", "a table", "a chart", "a plot", "a graph", "a figure"]
+        self.OCRModel = LatexOCR()
     
     def load_directory(self, directory_path: str) -> List[Dict]:
         """Load all supported documents from a directory"""
@@ -36,8 +45,32 @@ class DocumentLoader:
             # Load the file based on extension
             try:
                 if ext == '.pdf':
-                    content = self._load_pdf(file_path)
+                    content = self._load_pdf(str(file_path))
+                    images = self.get_png_files(directory_path)
+
+                    for image in images:
+                        img = Image.open(image)
+                        image_input = self.preprocess(img).unsqueeze(0).to(self.device)
+                        text_inputs = clip.tokenize(self.labels).to(self.device)
+                        
+
+                        with torch.no_grad():
+                            image_features = self.clipModel.encode_image(image_input)
+                            text_features = self.clipModel.encode_text(text_inputs)
+                            similarity = (image_features @ text_features.T).softmax(dim=-1)
+
+                        is_math = similarity[0][0] > 0.5 
+                        if is_math:
+                            try:
+                                equation = self.OCRModel(img)
+                                content = content.replace('![](' + str(image) + ')', equation)
+                            except ValueError as e:
+                                print(f"OCR failed for {image}: {e}, skipping")
+                                continue
+
+                    self.delete_png_files(directory_path)
                     if content:
+                        print("Document appended")
                         documents.append({
                             'filename': filename,
                             'file_path': file_path,
@@ -47,14 +80,58 @@ class DocumentLoader:
                 # Add more file type handlers here as needed
             except Exception as e:
                 self.logger.error(f"Error loading file {filename}: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 continue
         
         return documents
     
     def _load_pdf(self, file_path: str) -> Optional[str]:
         """Extract text from a PDF file"""
-        extraction = pymupdf4llm.to_markdown(file_path, use_ocr=True, header=False, footer=False)
+        extraction = pymupdf4llm.to_markdown(
+            file_path,                 
+            write_images=True,            # actually write image files
+            image_format="png",           
+            header=False,            
+            footer=False,               
+            use_ocr=True,                 # let layout/OCR help if needed
+            show_progress=False,
+        )
         return extraction
+
+    def get_png_files(self, directory_path: str) -> List[str]:
+        """Get a list of all PNG files in a directory (non-recursive)"""
+        png_files = []
+        
+        if not os.path.isdir(directory_path):
+            return png_files
+        
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+            
+            # Skip directories
+            if os.path.isdir(file_path):
+                continue
+            
+            # Check if file is a PNG
+            if filename.lower().endswith('.png'):
+                png_files.append(file_path)
+        
+        return png_files
+
+    def delete_png_files(self, directory_path: str, recursive: bool = True):
+        directory = Path(directory_path)
+        
+        if recursive:
+            png_files = directory.rglob("*.png")
+        else:
+            png_files = directory.glob("*.png")
+        
+        for png_file in png_files:
+            try:
+                png_file.unlink()  # Delete the file
+            except Exception as e:
+                print(f"Error deleting {png_file}: {e}")
     
     def _get_file_extension(self, filename: str) -> str:
         """Helper to get lowercase file extension"""
@@ -63,52 +140,60 @@ class DocumentLoader:
 
 
 def main():
-    """Load a PDF file and save the extracted content"""
+    """Load documents from a directory and save the extracted content"""
     logging.basicConfig(level=logging.INFO)
     
-    # Get PDF path from command line argument or use default
+    # Get directory path from command line argument
     if len(sys.argv) > 1:
-        pdf_path = sys.argv[1]
+        directory_path = sys.argv[1]
     else:
-        print("Usage: python document_loader.py <path_to_pdf>")
+        print("Usage: python document_loader.py <path_to_directory>")
         sys.exit(1)
     
-    # Validate file exists
-    if not os.path.isfile(pdf_path):
-        print(f"Error: File not found: {pdf_path}")
+    # Validate directory exists
+    if not os.path.isdir(directory_path):
+        print(f"Error: Directory not found: {directory_path}")
         sys.exit(1)
     
-    # Create loader and load PDF
+    # Create loader and load directory
     loader = DocumentLoader()
-    print(f"Loading PDF: {pdf_path}")
-    content = loader._load_pdf(pdf_path)
+    print(f"Loading documents from: {directory_path}")
+    documents = loader.load_directory(directory_path)
     
-    if content is None:
-        print("Error: Failed to load PDF content")
+    if not documents:
+        print("No documents were loaded.")
         sys.exit(1)
     
-    # Generate output filename
-    base_name = os.path.splitext(os.path.basename(pdf_path))[0]
-    output_path = f"{base_name}_extracted.md"
+    # Create outputs directory if it doesn't exist
+    outputs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
+    os.makedirs(outputs_dir, exist_ok=True)
     
-    # Save output
-    # If content is already a JSON string, write it directly; otherwise, convert to JSON
-    if isinstance(content, str):
-        try:
-            # Try to parse it to ensure it's valid JSON, then write formatted
-            parsed = json.loads(content)
+    # Save output for each document
+    for doc in documents:
+        # Generate output filename
+        base_name = os.path.splitext(doc['filename'])[0]
+        output_path = os.path.join(outputs_dir, f"{base_name}_extracted.md")
+        
+        # Save output
+        content = doc['content']
+        if isinstance(content, str):
+            try:
+                # Try to parse it to ensure it's valid JSON, then write formatted
+                parsed = json.loads(content)
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(parsed, f, indent=2, ensure_ascii=False)
+            except json.JSONDecodeError:
+                # If it's not valid JSON, write as plain text
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+        else:
+            # If it's a dict or other object, convert to JSON
             with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(parsed, f, indent=2, ensure_ascii=False)
-        except json.JSONDecodeError:
-            # If it's not valid JSON, write as plain text
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-    else:
-        # If it's a dict or other object, convert to JSON
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(content, f, indent=2, ensure_ascii=False)
+                json.dump(content, f, indent=2, ensure_ascii=False)
+        
+        print(f"Output saved to: {output_path}")
     
-    print(f"Output saved to: {output_path}")
+    print(f"\nSuccessfully processed {len(documents)} document(s).")
 
 
 if __name__ == "__main__":
