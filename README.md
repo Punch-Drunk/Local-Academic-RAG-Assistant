@@ -17,7 +17,7 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - **Environment**: Python 3.10, Linux, RTX 4060
 
 ## Current Status
-🚧 In Development - Phase 2: Intelligent LaTeX extraction
+🚧 In Development - Phase 3: Chunking strategy  
 
 ## Getting Started
 1. Clone the repository
@@ -28,9 +28,10 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 ## Roadmap
 - [X] Phase 1: Basic document loading (PDFs)
 - [X] Phase 2: Intelligent LaTeX extraction
-- [ ] Phase 3: Embedding and vector store setup
-- [ ] Phase 4: Integration with local LLM (Ollama)
-- [ ] Phase 5: Web interface with Streamlit
+- [ ] Phase 3: Chunking strategy
+- [ ] Phase 4: Embedding and vector store setup
+- [ ] Phase 5: Integration with local LLM (Ollama)
+- [ ] Phase 6: Web interface with Streamlit
 
 ## Learning Goals
 - [ ] Implement a complete RAG pipeline from scratch

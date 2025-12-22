@@ -74,6 +74,7 @@ class DocumentLoader:
                         documents.append({
                             'filename': filename,
                             'file_path': file_path,
+                            'course': directory_path,
                             'extension': ext,
                             'content': content
                         })
@@ -155,45 +156,48 @@ def main():
         print(f"Error: Directory not found: {directory_path}")
         sys.exit(1)
     
-    # Create loader and load directory
+    # Create loader and load directories
     loader = DocumentLoader()
-    print(f"Loading documents from: {directory_path}")
-    documents = loader.load_directory(directory_path)
-    
-    if not documents:
-        print("No documents were loaded.")
-        sys.exit(1)
-    
-    # Create outputs directory if it doesn't exist
-    outputs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
-    os.makedirs(outputs_dir, exist_ok=True)
-    
-    # Save output for each document
-    for doc in documents:
-        # Generate output filename
-        base_name = os.path.splitext(doc['filename'])[0]
-        output_path = os.path.join(outputs_dir, f"{base_name}_extracted.md")
+    subdirs = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
+
+    for dir in subdirs:
+        print(f"Loading documents from: {dir}")
+        documents = loader.load_directory(dir)
         
-        # Save output
-        content = doc['content']
-        if isinstance(content, str):
-            try:
-                # Try to parse it to ensure it's valid JSON, then write formatted
-                parsed = json.loads(content)
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    json.dump(parsed, f, indent=2, ensure_ascii=False)
-            except json.JSONDecodeError:
-                # If it's not valid JSON, write as plain text
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-        else:
-            # If it's a dict or other object, convert to JSON
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(content, f, indent=2, ensure_ascii=False)
+        if not documents:
+            print("No documents were loaded.")
+            sys.exit(1)
         
-        print(f"Output saved to: {output_path}")
-    
-    print(f"\nSuccessfully processed {len(documents)} document(s).")
+        # Create outputs directory if it doesn't exist
+        outputs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
+        os.makedirs(outputs_dir, exist_ok=True)
+        
+        # Save output for each document
+        for doc in documents:
+            # Generate output filename
+            base_name = os.path.splitext(doc['filename'])[0]
+            output_path = os.path.join(outputs_dir, f"{base_name}_extracted.md")
+            
+            # Save output
+            content = doc['content']
+            if isinstance(content, str):
+                try:
+                    # Try to parse it to ensure it's valid JSON, then write formatted
+                    parsed = json.loads(content)
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        json.dump(parsed, f, indent=2, ensure_ascii=False)
+                except json.JSONDecodeError:
+                    # If it's not valid JSON, write as plain text
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+            else:
+                # If it's a dict or other object, convert to JSON
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(content, f, indent=2, ensure_ascii=False)
+            
+            print(f"Output saved to: {output_path}")
+        
+        print(f"\nSuccessfully processed {len(documents)} document(s) for {dir}")
 
 
 if __name__ == "__main__":
