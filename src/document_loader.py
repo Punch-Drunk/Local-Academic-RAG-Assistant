@@ -10,6 +10,8 @@ import torch
 from pathlib import Path
 from pix2tex.cli import LatexOCR
 from PIL import Image
+from langchain_core.documents import Document
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 
 class DocumentLoader:
@@ -20,6 +22,7 @@ class DocumentLoader:
         self.clipModel, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.labels = ["a mathematical equation", "a diagram", "a table", "a chart", "a plot", "a graph", "a figure"]
         self.OCRModel = LatexOCR()
+        self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=("#", "Header 1"), strip_headers=False)
     
     def load_directory(self, directory_path: str) -> List[Dict]:
         """Load all supported documents from a directory"""
@@ -74,7 +77,7 @@ class DocumentLoader:
                         documents.append({
                             'filename': filename,
                             'file_path': file_path,
-                            'course': directory_path,
+                            'course': os.path.basename(directory_path),
                             'extension': ext,
                             'content': content
                         })
@@ -86,6 +89,23 @@ class DocumentLoader:
                 continue
         
         return documents
+
+    def convert_to_langDoc(self,documents):
+        langDocs = []
+        for doc in documents:
+            chunks = self.markdown_splitter.split_text(doc[0]['content'])
+            for i, chunk in enumerate(chunks):
+                langDocs.append(Document(
+                    page_content=chunk.page_content, 
+                    metadata={
+                        'source': doc['file_path'],
+                        'course': doc['course'],
+                        'header': chunk.metadata.get("Header 1", ""),
+                        'chunk_number': i
+                        }
+                    )
+                )
+        return langDocs
     
     def _load_pdf(self, file_path: str) -> Optional[str]:
         """Extract text from a PDF file"""
