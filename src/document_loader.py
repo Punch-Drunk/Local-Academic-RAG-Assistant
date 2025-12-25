@@ -24,7 +24,7 @@ class DocumentLoader:
         self.clipModel, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.labels = ["a mathematical equation", "a diagram", "a table", "a chart", "a plot", "a graph", "a figure"]
         self.OCRModel = LatexOCR()
-        self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=("#", "Header 1"), strip_headers=False)
+        self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("#", "Header 1")], strip_headers=False)
         self.embedding_model = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
     
     def load_directory(self, directory_path: str) -> List[Dict]:
@@ -55,7 +55,10 @@ class DocumentLoader:
                     images = self.get_png_files(directory_path)
 
                     for image in images:
-                        img = Image.open(image)
+                        try:
+                            img = Image.open(image)
+                        except Exception as e:
+                            print(f"Failed to open image {image}: {e}, skipping")
                         image_input = self.preprocess(img).unsqueeze(0).to(self.device)
                         text_inputs = clip.tokenize(self.labels).to(self.device)
                         
@@ -96,7 +99,7 @@ class DocumentLoader:
     def convert_to_langDoc(self,documents):
         langDocs = []
         for doc in documents:
-            chunks = self.markdown_splitter.split_text(doc[0]['content'])
+            chunks = self.markdown_splitter.split_text(doc['content'])
             for i, chunk in enumerate(chunks):
                 langDocs.append(Document(
                     page_content=chunk.page_content, 
@@ -200,9 +203,8 @@ def main():
         
         if not documents:
             print("No documents were loaded.")
-            sys.exit(1)
             
-        all_docs.append(documents)
+        all_docs.extend(documents)
         print(f"\nSuccessfully processed {len(documents)} document(s) for {dir}")
 
     lang_docs = loader.convert_to_langDoc(all_docs)
