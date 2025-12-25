@@ -12,6 +12,8 @@ from pix2tex.cli import LatexOCR
 from PIL import Image
 from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 
 
 class DocumentLoader:
@@ -23,6 +25,7 @@ class DocumentLoader:
         self.labels = ["a mathematical equation", "a diagram", "a table", "a chart", "a plot", "a graph", "a figure"]
         self.OCRModel = LatexOCR()
         self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=("#", "Header 1"), strip_headers=False)
+        self.embedding_model = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
     
     def load_directory(self, directory_path: str) -> List[Dict]:
         """Load all supported documents from a directory"""
@@ -67,9 +70,9 @@ class DocumentLoader:
                             try:
                                 equation = self.OCRModel(img)
                                 content = content.replace('![](' + str(image) + ')', equation)
-                            except ValueError as e:
+                            except Exception as e:
                                 print(f"OCR failed for {image}: {e}, skipping")
-                                continue
+                                
 
                     self.delete_png_files(directory_path)
                     if content:
@@ -159,6 +162,15 @@ class DocumentLoader:
         _, ext = os.path.splitext(filename)
         return ext.lower()
 
+    def embed_and_store(self,langdocs):
+        vector_store = Chroma.from_documents(
+            documents=langdocs,
+            embedding=self.embedding_model,
+            persist_directory="../chroma_db"
+        )
+        vector_store.persist()
+
+
 
 def main():
     """Load documents from a directory and save the extracted content"""
@@ -180,44 +192,22 @@ def main():
     loader = DocumentLoader()
     subdirs = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
 
+    all_docs = []
+
     for dir in subdirs:
         print(f"Loading documents from: {dir}")
-        documents = loader.load_directory(dir)
+        documents = loader.load_directory(f"data/{dir}")
         
         if not documents:
             print("No documents were loaded.")
             sys.exit(1)
-        
-        # Create outputs directory if it doesn't exist
-        outputs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
-        os.makedirs(outputs_dir, exist_ok=True)
-        
-        # Save output for each document
-        for doc in documents:
-            # Generate output filename
-            base_name = os.path.splitext(doc['filename'])[0]
-            output_path = os.path.join(outputs_dir, f"{base_name}_extracted.md")
             
-            # Save output
-            content = doc['content']
-            if isinstance(content, str):
-                try:
-                    # Try to parse it to ensure it's valid JSON, then write formatted
-                    parsed = json.loads(content)
-                    with open(output_path, 'w', encoding='utf-8') as f:
-                        json.dump(parsed, f, indent=2, ensure_ascii=False)
-                except json.JSONDecodeError:
-                    # If it's not valid JSON, write as plain text
-                    with open(output_path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-            else:
-                # If it's a dict or other object, convert to JSON
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    json.dump(content, f, indent=2, ensure_ascii=False)
-            
-            print(f"Output saved to: {output_path}")
-        
+        all_docs.append(documents)
         print(f"\nSuccessfully processed {len(documents)} document(s) for {dir}")
+
+    lang_docs = loader.convert_to_langDoc(all_docs)
+    loader.embed_and_store(lang_docs)
+    print("Successfully completed document processing")
 
 
 if __name__ == "__main__":
