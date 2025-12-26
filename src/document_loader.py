@@ -171,7 +171,6 @@ class DocumentLoader:
             embedding=self.embedding_model,
             persist_directory="../chroma_db"
         )
-        vector_store.persist()
 
 
 
