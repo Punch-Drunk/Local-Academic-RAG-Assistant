@@ -14,7 +14,7 @@ A Retrieval-Augmented Generation (RAG) system that allows me to query my machine
 - **Embeddings**: Sentence Transformers 
 - **Vector Store**: ChromaDB
 - **Document Processing**: PyMuPDF4LLM, PyMuPDF Layout, LaTeXOCR
-- **Environment**: Python 3.10, Linux, RTX 4060
+- **Environment**: Python 3.10, Linux, RTX 3060
 
 ## Current Status
 🚧 In Development - Phase 5: Integration with local LLM 

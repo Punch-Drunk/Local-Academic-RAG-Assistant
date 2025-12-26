@@ -74,8 +74,10 @@ class DocumentLoader:
                                 equation = self.OCRModel(img)
                                 content = content.replace('![](' + str(image) + ')', equation)
                             except Exception as e:
+                                content = content.replace('![](' + str(image) + ')', 'OMITTED MATH EQUATION')
                                 print(f"OCR failed for {image}: {e}, skipping")
-                                
+                        else:
+                            content = content.replace('![](' + str(image) + ')', 'OMITTED IMAGE')      
 
                     self.delete_png_files(directory_path)
                     if content:
@@ -169,7 +171,7 @@ class DocumentLoader:
         vector_store = Chroma.from_documents(
             documents=langdocs,
             embedding=self.embedding_model,
-            persist_directory="../chroma_db"
+            persist_directory="./chroma_db"
         )
 
 
